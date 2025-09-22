@@ -5,6 +5,9 @@ const { hideBin } = require("yargs/helpers");
 const fs = require("fs");
 const path = require("path");
 const { processSrt } = require("./srt-processor");
+const chalk = require("chalk");
+const error = chalk.bold.red;
+const warning = chalk.keyword("orange");
 
 const argv = yargs(hideBin(process.argv))
   .usage("Usage: $0 <input-file.srt> [options]")
@@ -49,6 +52,7 @@ try {
     warnings,
     newVariablesCount,
     substitutedCount,
+    unhandledVariablesCount,
     variables: updatedVariables,
   } = processSrt(data, variables);
 
@@ -64,15 +68,23 @@ try {
     console.log(
       `Substituted ${substitutedCount} variables. Added ${newVariablesCount} new variables to JSON.`
     );
+
+    if (unhandledVariablesCount > 0) {
+      console.log(
+        `\n${warning(
+          "Warnings:"
+        )} there is unhandled variable placeholder in the output.`
+      );
+    }
   }
 
   console.log(`\nProcessed ${outputContent.split("\n\n").length} segments.`);
   if (errors.length > 0) {
-    console.log("\nErrors:");
+    console.log(`\n${error("Errors:")}`);
     errors.forEach((error) => console.log(`- ${error}`));
   }
   if (warnings.length > 0) {
-    console.log("\nWarnings:");
+    console.log(`\n${warning("Warnings:")}`);
     warnings.forEach((warning) => console.log(`- ${warning}`));
   }
 } catch (err) {
