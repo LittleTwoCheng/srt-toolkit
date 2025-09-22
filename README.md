@@ -12,6 +12,7 @@ This is a Node.js command-line tool to validate, format, and process template va
   - Auto-fixes segments with a missing end time by using the start time of the next segment.
 - **Variable Processing**:
   - Finds and replaces template variables (e.g., `{{variable_name}}`) using a provided JSON file.
+  - Supports Unicode characters in variable names.
   - Automatically discovers new variables in the SRT file and adds them to the JSON file for future use.
 
 ## Usage
@@ -31,6 +32,7 @@ node srt-toolkit.js <input-file.srt> [--variables <variable-file.json>] [--outpu
 Given the following files:
 
 **`input.srt`**:
+
 ```
 12
 00:01:10,500 --> 00:01:13,000
@@ -46,6 +48,7 @@ This timecode is invalid.
 ```
 
 **`vars.json`**:
+
 ```json
 {
   "user": "Alice"
@@ -77,6 +80,7 @@ Warnings:
 ### Resulting Files
 
 **`formatted.srt`**:
+
 ```
 1
 00:01:10,500 --> 00:01:13,000
@@ -92,6 +96,7 @@ This timecode is invalid.
 ```
 
 **`vars.json` (Updated)**:
+
 ```json
 {
   "user": "Alice",
@@ -105,6 +110,7 @@ This project uses [Jest](https://jestjs.io/) for unit testing. To run the tests,
 
 1.  **Install dependencies:**
     If you haven't already, install the necessary development dependencies.
+
     ```bash
     npm install
     ```
