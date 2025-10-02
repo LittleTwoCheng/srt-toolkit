@@ -1,3 +1,13 @@
+# Overview - Audio & Subtitle Processing Toolkit
+
+Node.js CLI tools for audio and subtitle processing:
+
+- **🎞️ SRT Formatter** (`srt-toolkit`): Validate and process subtitle files with template variables
+- **🔎 Silence Detector** (`silence-detector`): Detect silence periods in audio files using FFmpeg
+- **✂️ Audio Splitter** (`audio-splitter`): Split audio files based on silence detection
+
+---
+
 # 🎞️ 💬 SRT Formatter CLI Tool (`srt-toolkit`)
 
 This is a Node.js command-line tool to validate, format, and process template variables in SubRip Subtitle (`.srt`) files.
@@ -221,7 +231,7 @@ Automatically generate FFmpeg commands to split audio files based on silence det
 
 ## Features
 
-- Reads silence end times from `silence_end.txt`
+- Reads silence end times from `silence_ends.txt`
 - Ensures minimum 5-minute intervals between splits
 - Generates properly formatted FFmpeg commands
 - Supports any audio format that FFmpeg can handle
@@ -229,23 +239,34 @@ Automatically generate FFmpeg commands to split audio files based on silence det
 ## Usage
 
 ```bash
-node audio-splitter.js <input-audio-file> [output-prefix] [--dry-run|-n] [--min-interval|-m <minutes>]
+node audio-splitter.js <input-audio-file> [output-prefix] [options]
 ```
 
 ### Arguments
 
 - `input-audio-file`: (Required) Path to the input audio file (e.g., `input.mp3`)
 - `output-prefix`: (Optional) Prefix for output files (default: `output_part`)
-- `--dry-run`, `-n`: (Optional) Print the FFmpeg command without executing it
-  — `--min-interval`, `-m <minutes>`: (Optional) Minimum interval in minutes (default: 5)
 
-## Example
+### Options
+
+- `--dry-run`, `-n`: (Optional) Print the FFmpeg command without executing it
+- `--min-interval`, `-m <minutes>`: (Optional) Minimum interval in minutes (default: 5)
+- `--silence-file`, `-s <file>`: (Optional) Silence file path (default: `silence_ends.txt`)
+
+## Examples
 
 ```bash
+# Basic usage
 node audio-splitter.js input.mp3 my_audio_part
+
+# With custom silence file and minimum interval
+node audio-splitter.js input.mp3 my_audio_part -s custom_silence.txt -m 10
+
+# Dry run with custom settings
+node audio-splitter.js input.mp3 my_audio_part --silence-file silence.txt --min-interval 7 --dry-run
 ```
 
-This will generate an FFmpeg command that splits `input.mp3` into multiple files with the prefix `my_audio_part1.mp3`, `my_audio_part2.mp3`, etc. Add `--dry-run` to preview the command without running FFmpeg.
+This will generate an FFmpeg command that splits `input.mp3` into multiple files with the prefix `my_audio_part1.mp3`, `my_audio_part2.mp3`, etc.
 
 ## Output
 
@@ -289,10 +310,10 @@ Convert video into audio
 ffmpeg -i input.mp4  output_audio.mp3
 ```
 
-find all silent moment in audio, dump the end time(second) to `silence_end.txt`
+find all silent moment in audio, dump the end time(second) to `silence_ends.txt`
 
 ```bash
-ffmpeg -i output_audio.mp3 -af silencedetect=n=-45dB:d=0.5 -f null - 2>&1 | grep "silence_end" | awk '{print $5}' > silence_end.txt
+ffmpeg -i output_audio.mp3 -af silencedetect=n=-45dB:d=0.5 -f null - 2>&1 | grep "silence_end" | awk '{print $5}' > silence_ends.txt
 ```
 
 `n=-45dB`noise tolerance level (audio below this level is considered silent) (in dB)
