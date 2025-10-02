@@ -21,7 +21,7 @@ function formatTime(seconds) {
 
 /**
  * Reads silence end times from file
- * @param {string} filePath - Path to silence_end.txt
+ * @param {string} filePath - Path to silence_ends.txt
  * @returns {number[]} Array of silence end times in seconds
  */
 function readSilenceEndTimes(filePath) {
@@ -39,12 +39,43 @@ function readSilenceEndTimes(filePath) {
 }
 
 /**
+ * Gets audio duration using FFprobe
+ * @param {string} inputFile - Path to input audio file
+ * @returns {Promise<number>} Duration in seconds
+ */
+function getAudioDuration(inputFile) {
+  return new Promise((resolve, reject) => {
+    const command = `ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${inputFile}"`;
+
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        reject(new Error(`Failed to get audio duration: ${error.message}`));
+        return;
+      }
+
+      const duration = parseFloat(stdout.trim());
+      if (isNaN(duration)) {
+        reject(new Error("Could not parse audio duration"));
+        return;
+      }
+
+      resolve(duration);
+    });
+  });
+}
+
+/**
  * Generates split points with minimum 5-minute intervals
  * @param {number[]} silenceEndTimes - Array of silence end times
  * @param {number} minIntervalMinutes - Minimum interval in minutes
+ * @param {number} audioDuration - Total audio duration in seconds
  * @returns {number[]} Array of split points
  */
-function generateSplitPoints(silenceEndTimes, minIntervalMinutes = 5) {
+function generateSplitPoints(
+  silenceEndTimes,
+  minIntervalMinutes = 5,
+  audioDuration = null
+) {
   const minIntervalSeconds = minIntervalMinutes * 60;
   const splitPoints = [0]; // Start with 0
   let lastSplitTime = 0;
@@ -55,6 +86,12 @@ function generateSplitPoints(silenceEndTimes, minIntervalMinutes = 5) {
       splitPoints.push(silenceEnd);
       lastSplitTime = silenceEnd;
     }
+  }
+
+  // Add the end of audio as the final split point if we have duration info
+  // and the last split point is not already at the end
+  if (audioDuration && splitPoints[splitPoints.length - 1] < audioDuration) {
+    splitPoints.push(audioDuration);
   }
 
   return splitPoints;
@@ -101,11 +138,12 @@ function generateFFmpegCommand(
 /**
  * Main function
  */
-function main() {
+async function main() {
   const rawArgs = process.argv.slice(2);
 
   let isDryRun = false;
   let minIntervalMinutes = 5;
+  let silenceFile = path.join(__dirname, "silence_ends.txt");
   const args = [];
 
   for (let i = 0; i < rawArgs.length; i++) {
@@ -133,9 +171,21 @@ function main() {
       i++; // skip value
       continue;
     }
+    if (arg === "--silence-file" || arg === "-s") {
+      const next = rawArgs[i + 1];
+      if (!next || next.startsWith("-")) {
+        console.error("❌ Error: --silence-file/-s requires a file path");
+        process.exit(1);
+      }
+      silenceFile = next;
+      i++; // skip value
+      continue;
+    }
     if (arg.startsWith("-")) {
       console.error(`❌ Error: Unknown option '${arg}'`);
-      console.log("Use --dry-run/-n or --min-interval/-m <minutes>.");
+      console.log(
+        "Use --dry-run/-n, --min-interval/-m <minutes>, or --silence-file/-s <file>."
+      );
       process.exit(1);
     }
     // positional
@@ -144,7 +194,17 @@ function main() {
 
   if (args.length === 0) {
     console.log(
-      "Usage: node audio-splitter.js <input-audio-file> [output-prefix]"
+      "Usage: node audio-splitter.js <input-audio-file> [output-prefix] [options]"
+    );
+    console.log("Options:");
+    console.log(
+      "  --dry-run, -n                    Print FFmpeg command without executing"
+    );
+    console.log(
+      "  --min-interval, -m <minutes>     Minimum interval in minutes (default: 5)"
+    );
+    console.log(
+      "  --silence-file, -s <file>        Silence file path (default: silence_ends.txt)"
     );
     console.log("Example: node audio-splitter.js input.mp3 output_part");
     process.exit(1);
@@ -152,7 +212,6 @@ function main() {
 
   const inputFile = args[0];
   const outputPrefix = args[1] || "output_part";
-  const silenceFile = path.join(__dirname, "silence_end.txt");
 
   console.log(
     "🎵 Audio Splitter - Generating FFmpeg command based on silence detection"
@@ -166,11 +225,30 @@ function main() {
   const silenceEndTimes = readSilenceEndTimes(silenceFile);
   console.log(`📊 Found ${silenceEndTimes.length} silence end times`);
 
+  // Get audio duration
+  let audioDuration = null;
+  try {
+    console.log("🎵 Getting audio duration...");
+    audioDuration = await getAudioDuration(inputFile);
+    console.log(
+      `⏱️  Audio duration: ${formatTime(
+        audioDuration
+      )} (${audioDuration.toFixed(2)}s)`
+    );
+  } catch (error) {
+    console.log(`⚠️  Could not get audio duration: ${error.message}`);
+    console.log("⚠️  Will not include final segment in output");
+  }
+
   // Generate split points
-  const splitPoints = generateSplitPoints(silenceEndTimes, minIntervalMinutes);
+  const splitPoints = generateSplitPoints(
+    silenceEndTimes,
+    minIntervalMinutes,
+    audioDuration
+  );
   console.log(
     `✂️  Generated ${splitPoints.length} split points:`,
-    splitPoints.map((p) => formatTime(p)).join(", ")
+    splitPoints.map((p) => `${formatTime(p)} (${p}s)`).join(", ")
   );
 
   // Generate FFmpeg command
@@ -209,7 +287,7 @@ function main() {
     child.stderr && child.stderr.pipe(process.stdout);
   } else {
     console.log(
-      "❌ No valid split points found. Check your silence_end.txt file."
+      "❌ No valid split points found. Check your silence_ends.txt file."
     );
   }
 }
@@ -222,6 +300,7 @@ if (require.main === module) {
 module.exports = {
   formatTime,
   readSilenceEndTimes,
+  getAudioDuration,
   generateSplitPoints,
   generateFFmpegCommand,
 };
