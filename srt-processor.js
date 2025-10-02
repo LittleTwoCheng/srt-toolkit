@@ -11,6 +11,8 @@ function timecodeToMilliseconds(timecode) {
 function processSegments(segments, variables, errors, warnings) {
   let lastTimecodeLine = null;
   return segments.map((segment, index) => {
+    // console.debug({ index, segment });
+
     const lines = segment.split("\n");
     const newIndex = index + 1;
 
@@ -27,11 +29,9 @@ function processSegments(segments, variables, errors, warnings) {
         if (index < segments.length - 1) {
           const nextSegmentLines = segments[index + 1].split("\n");
           const nextStartTime = nextSegmentLines[1].split(" --> ")[0];
-          if (nextStartTime && timecodeRegex.test(nextSegmentLines[1])) {
-            const prevEndTime = lastTimecodeLine
-              ? lastTimecodeLine.split(" --> ")[1]
-              : "00:00:00,000";
-            timecodeLine = `${prevEndTime} --> ${nextStartTime.trim()}`;
+
+          if (nextStartTime) {
+            timecodeLine = `${timecodeLine.trim()} --> ${nextStartTime.trim()}`;
             warnings.push(
               `Segment ${newIndex}: Missing start or end time. Original: "${originalTimecodeLine}". Corrected to: "${timecodeLine}"`
             );

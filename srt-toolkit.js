@@ -88,6 +88,7 @@ try {
     warnings.forEach((warning) => console.log(`- ${warning}`));
   }
 } catch (err) {
+  console.trace(err);
   console.error("Error:", err.message);
   process.exit(1);
 }
