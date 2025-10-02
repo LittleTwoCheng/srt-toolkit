@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "srt": "node srt-toolkit.js"
+    "srt": "node srt-toolkit.js",
+    "detect": "node silence-detector.js",
+    "split": "node audio-splitter.js"
   },
   "keywords": [],
   "author": "",
