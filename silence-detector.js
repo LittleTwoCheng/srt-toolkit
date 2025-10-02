@@ -134,7 +134,7 @@ async function main() {
         break;
       case "--threshold":
       case "-t":
-        if (nextArg && !nextArg.startsWith("-")) {
+        if (nextArg && nextArg.startsWith("-")) {
           const threshold = parseFloat(nextArg);
           if (isNaN(threshold)) {
             console.error("❌ Error: --threshold/-t requires a valid number");
