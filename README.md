@@ -291,26 +291,43 @@ npm run split input.mp3
 
 Useful FFmpeg commands for audio and video processing:
 
-Add subtitle to the video
+## Add subtitle to the video
 
 ```bash
 ffmpeg -i input.mp4 -vf subtitles=subtitle.srt output_srt.mp4
 ```
 
-Add soft subtitle
+⚠️ Chinese Font
+you may encounter difficulty when your subtitle contain Chinese character, repeated error like this when you embed subtitle to video:
+
+```
+[Parsed_subtitles_0 @ 0x10e604f10] Error opening font: '/System/Library/PrivateFrameworks/FontServices.framework/Resources/Reserved/PingFangUI.ttc', 0
+```
+
+How to resolve?
+
+- In MacOS, open the Application `Font Book`, try to download and install a proper Chinese font family over there, and try again.
+- you can also enforce the Chinese typefont like this:
+
+```bash
+ffmpeg -i input-video.mp4 -vf subtitles=subtitle-file.srt:force_style='FontName=PingFang HK' output-video.mp4
+```
+
+## Add soft subtitle
+
 (good for quick testing)
 
 ```bash
 ffmpeg -i input.mp4 -i subtitle.srt -c copy -c:s mov_text -metadata:s:s:0 language=chi ouptut_chi.mp4
 ```
 
-Convert video into audio
+## Convert video into audio
 
 ```bash
 ffmpeg -i input.mp4  output_audio.mp3
 ```
 
-find all silent moment in audio, dump the end time(second) to `silence_ends.txt`
+## find all silent moment in audio, dump the end time(second) to `silence_ends.txt`
 
 ```bash
 ffmpeg -i output_audio.mp3 -af silencedetect=n=-45dB:d=0.5 -f null - 2>&1 | grep "silence_end" | awk '{print $5}' > silence_ends.txt
@@ -325,3 +342,9 @@ ffmpeg -i output.mp3 -ss 00:00:00 -to 00:05:00 -c copy output_part1.mp3 \
 ```
 
 We can add more -ss, -to, and output file combinations to split the audio into as many custom segments as required.
+
+## Merge audio(MP3) into video(MP4):
+
+```bash
+ffmpeg -i input-video.mp4 -i input-audio.mp3 -map 0:v -map 1:a -c:v copy -shortest output-video-with-audio.mp4
+```
